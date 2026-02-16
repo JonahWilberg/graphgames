@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Evolutionary Graph Theory — Prisoner’s Dilemma</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header>
+    <h1>Evolutionary Graph Theory (Nowak-style) — Prisoner’s Dilemma on Graphs</h1>
+    <p class="sub">
+      Simulate C/D evolution on a graph with Death–Birth, Birth–Death, or Imitation (Fermi) updates.
+      Edit payoffs and graph structure; estimate cooperation levels and fixation probabilities.
+    </p>
+  </header>
+
+  <main class="grid">
+    <section class="panel">
+      <h2>Graph</h2>
+
+      <label>
+        Graph type
+        <select id="graphType">
+          <option value="ring">Ring (k-regular)</option>
+          <option value="lattice">2D Lattice (von Neumann)</option>
+          <option value="erdos">Erdős–Rényi (G(n,p))</option>
+          <option value="ba">Barabási–Albert (scale-free)</option>
+        </select>
+      </label>
+
+      <div class="row">
+        <label>
+          N (nodes)
+          <input id="N" type="number" min="10" max="2000" value="200" />
+        </label>
+
+        <label>
+          Seed
+          <input id="seed" type="number" value="1" />
+        </label>
+      </div>
+
+      <div id="graphParams"></div>
+
+      <div class="btnRow">
+        <button id="buildGraph">Build graph</button>
+      </div>
+
+      <div class="small">
+        Tip: For rings, the “degree k” is the key parameter used in classic weak-selection results.
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Game / Payoffs</h2>
+
+      <label class="inline">
+        <input type="checkbox" id="useDonation" checked />
+        Use donation game (b,c) (maps to PD matrix)
+      </label>
+
+      <div id="donationBox">
+        <div class="row">
+          <label>Benefit b <input id="b" type="number" step="0.1" value="2.0"/></label>
+          <label>Cost c <input id="c" type="number" step="0.1" value="1.0"/></label>
+        </div>
+        <div class="small">
+          Donation-game payoff matrix: R=b−c, S=−c, T=b, P=0.
+        </div>
+      </div>
+
+      <div id="matrixBox" class="hidden">
+        <div class="matrix">
+          <div></div><div>C</div><div>D</div>
+          <div>C</div>
+          <input id="R" type="number" step="0.1" value="1.0"/>
+          <input id="S" type="number" step="0.1" value="-1.0"/>
+          <div>D</div>
+          <input id="T" type="number" step="0.1" value="2.0"/>
+          <input id="P" type="number" step="0.1" value="0.0"/>
+        </div>
+        <div class="small">Rows = focal player strategy; columns = opponent strategy.</div>
+      </div>
+
+      <h2>Evolution</h2>
+
+      <label>
+        Update rule
+        <select id="updateRule">
+          <option value="DB">Death–Birth (DB)</option>
+          <option value="BD">Birth–Death (BD)</option>
+          <option value="IM">Imitation (Fermi)</option>
+        </select>
+      </label>
+
+      <div class="row">
+        <label>
+          Selection intensity
+          <input id="intensity" type="number" step="0.01" value="0.05" />
+        </label>
+        <label>
+          Steps / tick
+          <input id="stepsPerTick" type="number" min="1" max="5000" value="200" />
+        </label>
+      </div>
+
+      <div class="row">
+        <label>
+          Init coop fraction
+          <input id="initC" type="number" min="0" max="1" step="0.01" value="0.5" />
+        </label>
+        <label>
+          Mut. rate (optional)
+          <input id="mu" type="number" min="0" max="1" step="0.0001" value="0" />
+        </label>
+      </div>
+
+      <div class="btnRow">
+        <button id="resetPop">Reset population</button>
+        <button id="stepOnce">Step</button>
+        <button id="runToggle">Run</button>
+      </div>
+
+      <h2>Fixation experiments</h2>
+      <div class="row">
+        <label>
+          Trials
+          <input id="trials" type="number" min="10" max="5000" value="200" />
+        </label>
+        <label>
+          Max steps/trial
+          <input id="maxStepsTrial" type="number" min="100" max="2000000" value="200000" />
+        </label>
+      </div>
+
+      <div class="btnRow">
+        <button id="runFixation">Estimate fixation</button>
+      </div>
+
+      <div class="small" id="theoryHint"></div>
+    </section>
+
+    <section class="panel wide">
+      <h2>Visualization</h2>
+
+      <div class="vizRow">
+        <canvas id="canvas" width="900" height="520"></canvas>
+        <div class="stats">
+          <div><b>Graph:</b> <span id="graphInfo">—</span></div>
+          <div><b>Time:</b> <span id="timeInfo">0</span></div>
+          <div><b>Cooperators:</b> <span id="coopInfo">—</span></div>
+          <div><b>Avg degree:</b> <span id="degInfo">—</span></div>
+          <hr />
+          <div><b>Fixation (C):</b> <span id="fixC">—</span></div>
+          <div><b>Fixation (D):</b> <span id="fixD">—</span></div>
+          <div><b>Timed out:</b> <span id="fixT">—</span></div>
+          <hr />
+          <div class="small">
+            Colors: blue = C, red = D. Layout is a simple force-ish / grid-ish placement for readability,
+            not a perfect physics sim.
+          </div>
+        </div>
+      </div>
+
+      <h2>Cooperator fraction over time</h2>
+      <canvas id="chart" width="900" height="220"></canvas>
+    </section>
+  </main>
+
+  <footer>
+    <div class="small">
+      Notes: This is a Monte Carlo simulator for standard update rules used in evolutionary graph theory.
+      For classic weak-selection results on regular graphs, compare DB vs BD and vary b/c vs degree k.
+    </div>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
